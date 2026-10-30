@@ -5,7 +5,8 @@ import { spawn } from 'node:child_process';
 import { Auth, login } from './auth.mjs';
 import { createBridge, listModels } from './server.mjs';
 import { convertResponse } from './protocol.mjs';
-import { checkedJSON } from './common.mjs';
+import { BridgeError, checkedJSON } from './common.mjs';
+import { workBuddyModel } from './connection.mjs';
 
 const args = process.argv.slice(2), command = args[0] ?? 'help';
 function option(name, fallback) {
@@ -27,6 +28,9 @@ try {
   if (command === 'init') { await auth.init(); console.log('Local host ID and bridge key created. Use `key` to view the WorkBuddy key.'); }
   else if (command === 'key') console.log((await auth.init()).local_key);
   else if (command === 'status') console.log(JSON.stringify(await auth.status(), null, 2));
+  else if (command === 'connection') console.log(JSON.stringify(await workBuddyModel(auth, {
+    requirePublic: args.includes('--require-public'), port: portOption('port', 8787),
+  }), null, 2));
   else if (command === 'login') {
     const result = await login(auth, { port: portOption('callback-port', 1455), host: hostOption(),
       onReady: url => console.log(`Continue with ChatGPT in your browser:\n${url}\nWaiting for local callback…`),
@@ -38,6 +42,14 @@ try {
         child.on('error', () => console.log('Open the displayed authorization URL manually.')); child.unref();
       } });
     console.log(JSON.stringify(result, null, 2));
+    if (result.plan_usage_enabled) {
+      console.log('\nWorkBuddy model configuration (append this object to ~/.workbuddy/models.json):');
+      console.log(JSON.stringify(await workBuddyModel(auth, {
+        requirePublic: args.includes('--require-public'), port: portOption('port', 8787),
+      }), null, 2));
+    } else if (args.includes('--require-public')) {
+      throw new BridgeError('ChatGPT plan usage was not granted. Reauthorize and enable it before using the model.', 403, 'plan_usage_not_granted');
+    }
   } else if (command === 'models') {
     const catalog = await listModels(auth); console.log(JSON.stringify(catalog.data.map(m => ({ slug: m.id, name: m.name })), null, 2));
   } else if (command === 'serve') {
@@ -58,7 +70,7 @@ try {
     const final = await convertResponse(response, model, new Set());
     console.log(final.choices[0].message.content); console.log('Received response.completed. Confirm the app usage in ChatGPT Settings → Usage.');
   } else if (command === 'logout') { await auth.logout(); console.log('Renewable session revoked and local tokens cleared. Client registration and local key retained.'); }
-  else console.log(`WorkBuddy Local Subscription Bridge (Node.js 22+, no npm install)\n\nCommands:\n  init                 Create a private local data directory\n  login                Complete official ChatGPT OAuth in browser\n  status               Show login/permission status without tokens\n  models               Discover account-specific model slugs\n  key                  Print only the local WorkBuddy bearer key\n  serve                Listen on 127.0.0.1:8787\n  verify --model SLUG  Send one real inference to verify access\n  logout               Revoke the renewable session\n\nOptions:\n  --data-dir PATH       Separate private directory for this account\n  --host 127.0.0.1      Listener address; use 0.0.0.0 inside Docker only\n  --port 8787           Local server port\n  --callback-port 1455  OAuth callback port (redirect host stays 127.0.0.1)\n  --no-open             Display authorization URL without opening browser\n\nThis is a personal integration prototype. Actual account eligibility,\nmodel access and quota consumption require browser authorization and a\ncompleted real request. OpenAI API keys are not needed for this flow.`);
+  else console.log(`WorkBuddy Local Subscription Bridge (Node.js 22+, no npm install)\n\nCommands:\n  init                 Create a private local data directory\n  login                Complete official ChatGPT OAuth in browser\n  status               Show login/permission status without tokens\n  connection           Print a ready-to-paste WorkBuddy model (includes bridge key)\n  models               Discover account-specific model slugs\n  key                  Print only the local WorkBuddy bearer key\n  serve                Listen on 127.0.0.1:8787\n  verify --model SLUG  Send one real inference to verify access\n  logout               Revoke the renewable session\n\nOptions:\n  --data-dir PATH       Separate private directory for this account\n  --host 127.0.0.1      Listener address; use 0.0.0.0 inside Docker only\n  --port 8787           Local server port\n  --callback-port 1455  OAuth callback port (redirect host stays 127.0.0.1)\n  --no-open             Display authorization URL without opening browser\n  --require-public      Require an active public endpoint for login/connection output\n\nThis is a personal integration prototype. Actual account eligibility,\nmodel access and quota consumption require browser authorization and a\ncompleted real request. OpenAI API keys are not needed for this flow.`);
 } catch (e) {
   // Deliberately do not print raw fetch exceptions, token responses or URLs.
   console.error(`${e.code ?? 'bridge_error'}: ${e.message}`); process.exitCode = 1;

@@ -1,6 +1,6 @@
 purpose:
-  stands_in_for: OpenAI model catalog and subscription-authorized Responses SSE; credentials and model names are synthetic.
-  unblocks: Real loopback bridge HTTP validation without spending subscription allowance or logging into OpenAI.
+  stands_in_for: OpenAI model catalog and subscription-authorized Responses SSE, plus the Docker-private ngrok agent endpoint catalog; credentials, endpoint URLs and model names are synthetic.
+  unblocks: Real loopback bridge HTTP and public connection-configuration validation without spending subscription allowance, logging into OpenAI or opening a public ngrok tunnel.
 assumptions:
   - id: official-request-shape
     status: supported
@@ -37,6 +37,13 @@ assumptions:
     verification: On 2026-10-31 live diagnostics received HTTP 200 with no Content-Type, text deltas and completed message snapshots followed by response.completed with an empty output array. After compatibility fixes, one real streamed bridge request returned Bridge OK., stop and DONE. All 34 container tests and 16 Postman simulation scenarios passed; inspected member traffic included missing/incorrect Content-Type and empty terminal output cases, with 15 inference requests recorded by the stand-in. Inconsistent snapshots and failed/truncated streams still failed without a success finish.
     source: src/server.mjs ; src/protocol.mjs ; test/bridge.test.mjs ; test/simulation.mjs ; postman/mocks/openai/default.js ; VALIDATION.md live validation
     updated_at: '2026-10-31'
+  - id: ngrok-agent-endpoint-discovery
+    status: supported
+    claim: The documented agent endpoint catalog can identify the HTTPS endpoint associated with the bridge upstream; required-public mode refuses a missing or mismatched endpoint.
+    reason: Official agent API documentation defines GET /api/endpoints with endpoints[].url and upstream.url. Local HTTP tests and the Postman agent fixture exercise selection and readiness. An offline real agent also confirmed the empty-catalog response shape. Live cloud connectivity is outside this evidence.
+    verification: On 2026-10-31, 40 tests passed on the host and in the rebuilt image. The expanded Postman simulation passed 17 scenarios and NDJSON confirmed the ngrok member GET /api/endpoints call. ngrok 3.39.13 ran with networking disabled, served an empty endpoints array and rejected a hostile Host with HTTP 401. No real authtoken, public tunnel or new browser grant was used. See fingerprint ngrok-deployment-20261031 and VALIDATION.md.
+    source: https://ngrok.com/docs/gateway/agent/api ; src/connection.mjs ; test/connection.test.mjs ; postman/mocks/ngrok/default.js ; test/simulation.mjs
+    updated_at: '2026-10-31'
 fingerprints:
   - id: local-prototype-20261031
     date: '2026-10-31'
@@ -50,3 +57,7 @@ fingerprints:
     date: '2026-10-31'
     commit: No repository commit; local deliverable 0.1.0 with missing Content-Type and empty terminal output compatibility fixes
     cli: Postman 1.77.0; Node.js 22.23.4 on host and in container; Docker 29.8.2; Compose 5.5.0
+  - id: ngrok-deployment-20261031
+    date: '2026-10-31'
+    commit: 63ef450 plus ngrok ingress, deployment script and connection-output changes validated before commit
+    cli: Postman 1.77.0; Node.js 22.23.4; Docker 29.8.2; Compose 5.5.0; ngrok 3.39.13

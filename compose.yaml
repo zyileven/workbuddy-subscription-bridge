@@ -6,12 +6,41 @@ services:
     image: workbuddy-subscription-bridge:local
     init: true
     restart: unless-stopped
+    environment:
+      BRIDGE_PUBLIC_URL: ${NGROK_URL:-}
+      BRIDGE_NGROK_API_URL: http://ngrok:4040
     ports:
       - "127.0.0.1:8787:8787"
       - "127.0.0.1:1455:1455"
     volumes:
       - bridge-data:/app/.local
     read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  ngrok:
+    image: ngrok/ngrok:3
+    profiles: [public]
+    restart: unless-stopped
+    depends_on:
+      bridge:
+        condition: service_healthy
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    command:
+      - http
+      - http://bridge:8787
+      - --url=${NGROK_URL:-}
+      - --config=/etc/ngrok/ngrok.yml
+      - --traffic-policy-file=/etc/ngrok/traffic-policy.yml
+      - --inspect=false
+      - --log=stdout
+      - --log-format=json
+    volumes:
+      - ./ngrok/ngrok.yml:/etc/ngrok/ngrok.yml:ro
+      - ./ngrok/traffic-policy.yml:/etc/ngrok/traffic-policy.yml:ro
     cap_drop:
       - ALL
     security_opt:

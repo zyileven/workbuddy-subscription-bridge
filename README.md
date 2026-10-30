@@ -4,6 +4,85 @@
 教程以 `~/workbuddy-subscription-bridge` 为示例目录，包含终端命令、客户端配置、验收和排错。
 使用 Docker 可直接按 [Docker 启动与授权](docs/Docker.md) 操作，宿主机无需安装 Node.js。
 迁移到另一台常开电脑，请按 [远程部署与持续运行](docs/远程部署.md) 操作。
+需要公网 HTTPS 地址，可启用 Compose 的 [ngrok 服务](docs/ngrok.md)，在服务器 `.env` 中填写 `NGROK_AUTHTOKEN`。
+
+## 服务器一键部署、登录并获取 WorkBuddy 配置
+
+服务器需要已安装并启动 Docker，支持 `docker compose`。先获取代码并配置 `.env`：
+
+```bash
+git clone https://github.com/zyileven/workbuddy-subscription-bridge.git ~/workbuddy-subscription-bridge
+cd ~/workbuddy-subscription-bridge
+cp .env.example .env
+chmod 600 .env
+```
+
+已有仓库时用 `git pull --ff-only` 更新；已有 `.env` 时保留并编辑原文件。填写：
+
+```dotenv
+COMPOSE_PROFILES=public
+NGROK_AUTHTOKEN=你的_ngrok_agent_authtoken
+NGROK_URL=
+```
+
+`NGROK_URL` 可选，可以填写账号下可用的完整 HTTPS 地址；留空会自动读取 ngrok
+启动后的公网地址。ngrok token 只在服务器 `.env` 保存。
+
+如果**服务器本身能打开浏览器**，在服务器执行：
+
+```bash
+sh start.sh
+```
+
+如果是**无桌面的远程服务器**，在有浏览器的电脑执行以下一条命令，替换
+`USER@REMOTE_HOST`。它同时建立登录回调转发并在服务器运行脚本：
+
+```bash
+ssh -L 127.0.0.1:1455:127.0.0.1:1455 USER@REMOTE_HOST \
+  'cd ~/workbuddy-subscription-bridge && sh start.sh'
+```
+
+脚本会构建并启动桥接和 ngrok、打印登录链接。保持终端运行，在浏览器打开链接，
+登录 ChatGPT 并授权套餐使用。回调仍为 `http://127.0.0.1:1455/auth/callback`。
+登录成功后会自动读取当前公网地址和桥接 Key，直接打印完整的 WorkBuddy 模型 JSON：
+
+```json
+{
+  "id": "gpt-6.1-sol-bridge",
+  "name": "GPT-6.1 Sol（订阅桥接）",
+  "vendor": "Custom",
+  "provider": "openai",
+  "api": "openai-completions",
+  "url": "https://你的实际公网地址/v1/chat/completions",
+  "apiKey": "脚本会在这里填入真实桥接Key",
+  "supportsToolCall": true,
+  "supportsImages": true,
+  "supportsReasoning": true,
+  "onlyReasoning": true,
+  "useCustomProtocol": true,
+  "reasoning": {
+    "defaultEffort": "medium",
+    "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
+    "canDisableThinking": false
+  }
+}
+```
+
+复制**终端实际输出的对象**，追加到使用 WorkBuddy 那台电脑的
+`~/.workbuddy/models.json` 数组中，保留其他模型。如果已有桥接条目，只替换该条目。
+然后在 WorkBuddy 选择 `GPT-6.1 Sol（订阅桥接）`。已有会话若未加载新配置，完全退出
+并重新打开 WorkBuddy 后再选模型。首次登录完成后可以关闭 SSH，日常通过 ngrok 访问。
+
+已经登录过、只想再次获取同一段配置时，在服务器执行：
+
+```bash
+docker compose exec -T bridge node src/cli.mjs connection --require-public
+```
+
+这个命令不重新登录、不发推理请求；输出包含可直接使用的桥接 Key。ngrok 尚未上线时
+会明确报错并保留登录数据，修好 `.env` 或网络后重新获取即可。
+
+详细维护步骤见 [ngrok 公网入口](docs/ngrok.md) 和 [远程部署](docs/远程部署.md)。
 
 让 WorkBuddy 向本机发送 Chat Completions 请求，由本机服务完成官方
 Sign in with ChatGPT 授权，再向公开的 OpenAI Responses API 发起请求。

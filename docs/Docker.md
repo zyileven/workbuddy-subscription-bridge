@@ -2,7 +2,7 @@
 
 另一台常开电脑或无桌面服务器的完整步骤见 [远程部署与持续运行](远程部署.md)。
 
-在项目目录执行，要求 Docker 引擎和 Docker Compose 已运行。宿主机无需安装 Node.js，也无需提供 OpenAI API Key 或创建 `.env`。
+在项目目录执行，要求 Docker 引擎和 Docker Compose 已运行。宿主机无需安装 Node.js，也无需提供 OpenAI API Key。本地模式无需 `.env`；需要公网访问时，按 [ngrok 公网入口](ngrok.md) 复制 `.env.example` 并填写 token。
 
 ```bash
 cd ~/workbuddy-subscription-bridge
@@ -19,6 +19,8 @@ docker compose exec bridge node src/cli.mjs login --host 0.0.0.0 --no-open
 ```
 
 保持命令运行，在这台电脑的浏览器中打开终端打印的授权链接，登录自己的 ChatGPT 账号，并按页面提示授权套餐使用。完成后应显示 `connected: true` 和 `plan_usage_enabled: true`。不需要把账号密码或 OAuth 令牌发给任何人。
+授权成功后会自动打印 WorkBuddy 模型 JSON，包含接口地址和本机桥接 Key；启用 ngrok
+时会尝试使用实际公网地址。再次获取用 `docker compose exec -T bridge node src/cli.mjs connection`。
 
 容器内监听 `0.0.0.0` 才能接收 Docker 转发；Compose 将服务端口 8787 和回调端口 1455 都仅发布到宿主机 `127.0.0.1`。回调地址仍为 `http://127.0.0.1:1455/auth/callback`，不要改成容器名称或 `localhost`。若回调端口被其他程序占用，需要将 Compose 中的回调端口两端及登录命令的 `--callback-port` 同时改为相同的新端口。
 

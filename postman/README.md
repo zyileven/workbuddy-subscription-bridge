@@ -4,6 +4,9 @@ This fixture was written from the official OpenAI subscription-flow and SSE
 documentation, not pulled from an owning team's published mock. It encodes our
 selected contract examples and does not establish real eligibility or billing.
 No upstream account credentials are used. No Postman cloud resources are needed.
+The ngrok agent fixture models the documented Docker-private `GET /api/endpoints`
+response to test automatic public URL selection and WorkBuddy model output. It
+does not open a public tunnel or validate a real ngrok account.
 
 From the deliverable root, terminal A:
 

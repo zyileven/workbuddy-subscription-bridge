@@ -3,8 +3,16 @@
 The native CLI defaults to listening on 127.0.0.1. Docker explicitly uses
 `--host 0.0.0.0` inside the container; Compose publishes both bridge and OAuth
 callback ports on the host's 127.0.0.1 only. The OAuth redirect remains 127.0.0.1.
+An opt-in `public` Compose profile adds an ngrok HTTPS ingress to `bridge:8787`.
+Its traffic policy rewrites Host to `127.0.0.1:8787`; bridge bearer authentication
+and Origin rejection still apply. The OAuth callback port is not tunneled by ngrok.
 Its bearer key is a separate randomly generated local secret; an OpenAI credential is never supplied to WorkBuddy.
 No OAuth, token-import, or upstream-URL configuration endpoint is exposed by HTTP.
+Successful CLI login also prints a WorkBuddy model object containing the bridge
+key and connection URL. `connection` prints it again without signing in or
+performing inference. Public mode reads ngrok's Docker-private GET /api/endpoints
+and matches the bridge upstream; --require-public refuses to print a loopback
+fallback or an unconfirmed configured public URL when the agent is unavailable.
 
 | Endpoint | Contract |
 | --- | --- |

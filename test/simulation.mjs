@@ -1,6 +1,7 @@
 // Run the real bridge against a separately running Postman HTTP simulation.
 import assert from 'node:assert/strict';
 import { createBridge } from '../src/server.mjs';
+import { workBuddyModel } from '../src/connection.mjs';
 const upstream = process.argv[2];
 if (!upstream || !/^http:\/\/127\.0\.0\.1:\d+\/openai$/.test(upstream)) throw new Error('Usage: node test/simulation.mjs http://127.0.0.1:4010/openai');
 const key = 'fixture-local-key-at-least-32-characters';
@@ -38,11 +39,18 @@ try {
   const inconsistent = await (await post({ model: 'fixture-empty-final-inconsistent', stream: true })).text();
   assert.match(inconsistent, /inconsistent_stream/);
   assert.doesNotMatch(inconsistent, /\[DONE\]|"finish_reason":"(?:stop|tool_calls)"/);
+  const modelConfig = await workBuddyModel({
+    status: async () => ({ connected: true, plan_usage_enabled: true }),
+    init: async () => ({ local_key: key }),
+  }, { ngrokAPI: `${new URL(upstream).origin}/ngrok`, publicURL: '', requirePublic: true });
+  assert.equal(modelConfig.url, 'https://fixture-bridge.ngrok.example/v1/chat/completions');
+  assert.equal(modelConfig.apiKey, key);
   const inspected = await (await fetch(`${upstream}/inspect`)).json();
   const requests = inspected.records.filter(r => r.path === '/responses');
   assert.equal(requests.length, 15);
   for (const request of requests) { assert.equal(request.body.store, false); assert.equal(request.body.stream, true); assert.ok(Array.isArray(request.body.input)); }
-  console.log('Postman HTTP simulation: 16 scenarios passed; 15 inference requests observed by the upstream stand-in.');
+  console.log('Postman HTTP simulation: 17 scenarios passed; 15 inference requests observed by the upstream stand-in.');
   console.log('Verified model discovery, streamed text, parallel tools, tool results, HTTP 429, stream failure, dropped stream, timeout, missing/incorrect Content-Type and empty terminal output handling.');
-  console.log('Real OpenAI eligibility, quota consumption and WorkBuddy compatibility remain unverified.');
+  console.log('Verified ngrok agent endpoint discovery and ready-to-paste model configuration against a local agent stand-in.');
+  console.log('This simulation does not verify real provider eligibility, quota, public ngrok connectivity or WorkBuddy behavior.');
 } finally { bridge.closeAllConnections(); await new Promise(r => bridge.close(r)); }

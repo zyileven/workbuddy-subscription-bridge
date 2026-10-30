@@ -148,3 +148,41 @@ and an exact check for the actual local bridge key. The deployment JSON example
 parsed with an empty key, Compose configuration validated, and Git ignore checks
 confirmed exclusion of local account data, environment secrets and key files.
 Runtime source is unchanged since the passing 35-test container run above.
+
+## ngrok ingress and one-command deployment, 2026-10-31
+
+Added the opt-in public Compose profile, `.env.example`, ngrok Host-rewrite
+policy and Docker-private agent API configuration. `sh start.sh` validates the
+environment, starts bridge/ngrok and triggers browser login. Successful login
+prints a complete WorkBuddy model object; `connection --require-public` prints
+it again without logging in or invoking a model. Public endpoint discovery uses
+GET /api/endpoints, selects only the HTTPS endpoint for the bridge upstream,
+waits briefly for readiness and refuses an unavailable/mismatched public URL.
+
+- 40 tests passed on the host and inside the rebuilt image with external
+  networking disabled. New checks cover endpoint selection, startup readiness,
+  public URL validation, no localhost fallback in required-public mode, missing
+  account/plan permission, and CLI JSON containing the bridge key without OAuth
+  credentials or the ngrok authtoken.
+- The expanded Postman simulation passed 17 scenarios. NDJSON member events
+  confirmed ngrok GET /api/endpoints alongside the 15 modeled inference requests.
+  Both provider fixtures use synthetic data; neither creates a public endpoint.
+- Compose checks verified default local mode, `.env.example` public activation,
+  authtoken forwarding only to ngrok, optional URL selection, the healthy bridge
+  dependency, read-only config mounts and no published agent-management port.
+- The official ngrok:3 image reported version 3.39.13; `config check` accepted
+  the v3 agent configuration. The exact configured agent command ran with
+  networking disabled and its local API returned HTTP 200 with an empty endpoint
+  list. A hostile Host was rejected with HTTP 401. The initial test expected
+  403; it was corrected to check rejection, without changing the agent policy.
+- A POSIX-shell run with an isolated Docker command fixture verified start.sh
+  validates the environment, starts services and runs login with public endpoint
+  enforcement, relaying the resulting model JSON without printing the authtoken.
+- No real ngrok authtoken was supplied or used. Live HTTPS tunnel connectivity,
+  server browser authorization and WorkBuddy use through that tunnel remain to
+  be verified on the deployment server. All temporary local agent/simulation
+  processes were stopped; the real local bridge remains stopped.
+
+Primary contracts: https://ngrok.com/docs/gateway/agent/api ;
+https://ngrok.com/docs/gateway/agent/config/v3 ;
+https://ngrok.com/docs/gateway/traffic-policy/actions/add-headers

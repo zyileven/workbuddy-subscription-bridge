@@ -6,3 +6,8 @@ mocks:
     origin:
       - api.openai.com
     path: postman/mocks/openai
+  - name: ngrok local agent endpoint discovery fixture
+    routeKey: ngrok
+    origin:
+      - ngrok
+    path: postman/mocks/ngrok
