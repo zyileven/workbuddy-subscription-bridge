@@ -1,0 +1,134 @@
+openapi: 3.0.3
+info:
+  title: WorkBuddy Local Subscription Bridge
+  version: 0.1.0
+  description: Personal loopback bridge. OAuth login is performed through the CLI, not this HTTP API.
+servers:
+  - url: http://127.0.0.1:8787
+security:
+  - localBearer: []
+paths:
+  /health:
+    get:
+      operationId: health
+      summary: Check the local listener without exposing account state
+      security: []
+      responses:
+        '200':
+          description: Local service is running; does not prove upstream access
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  service: { type: string }
+  /v1/models:
+    get:
+      operationId: models
+      summary: Discover models for the authorized ChatGPT account
+      responses:
+        '200':
+          description: Chat-compatible model list; not proof of inference entitlement
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [object, data]
+                properties:
+                  object: { type: string, enum: [list] }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, object]
+                      properties:
+                        id: { type: string }
+                        object: { type: string, enum: [model] }
+        default: { $ref: '#/components/responses/Error' }
+  /v1/chat/completions:
+    post:
+      operationId: chat
+      summary: Convert Chat Completions to a subscription-authorized Responses request
+      description: Text, user image_url and function tools only; unsupported constraints fail with 400. Unsupported sampling and output-budget fields are stripped and reported in a header. See CONTRACT.md.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, messages]
+              properties:
+                model: { type: string, minLength: 1 }
+                stream: { type: boolean, default: false }
+                n: { type: integer, enum: [1] }
+                messages:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [role]
+                    properties:
+                      role: { type: string, enum: [system, developer, user, assistant, tool] }
+                      content:
+                        nullable: true
+                        oneOf:
+                          - { type: string }
+                          - { type: array, items: { type: object } }
+                      tool_calls: { type: array, items: { type: object } }
+                      tool_call_id: { type: string }
+                tools: { type: array, items: { type: object } }
+                tool_choice: { type: string, enum: [auto, none, required] }
+                reasoning_effort: { type: string, enum: [none, minimal, low, medium, high, xhigh, max] }
+                parallel_tool_calls: { type: boolean }
+                stream_options:
+                  type: object
+                  properties:
+                    include_usage: { type: boolean }
+            example:
+              model: fixture-text
+              messages: [{ role: user, content: Hello }]
+              stream: false
+      responses:
+        '200':
+          description: Completed JSON or SSE chunks. A stream can fail after HTTP 200; only a success finish chunk followed by DONE denotes completion.
+          headers:
+            x-bridge-ignored-parameters:
+              description: Unsupported sampling or budget parameters removed from the upstream request
+              schema: { type: string }
+            x-request-id:
+              description: OpenAI request ID when provided
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { type: object, required: [id, object, choices] }
+            text/event-stream:
+              schema: { type: string }
+        default: { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    localBearer:
+      type: http
+      scheme: bearer
+      description: Local bridge key, never an OpenAI access or refresh token
+  responses:
+    Error:
+      description: Invalid request, authentication failure, upstream failure, usage limit or unsupported feature
+      headers:
+        Retry-After: { schema: { type: string } }
+        x-request-id: { schema: { type: string } }
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: object
+                required: [message, type, code]
+                properties:
+                  message: { type: string }
+                  type: { type: string }
+                  code: { type: string }
+                  param: { type: string, nullable: true }

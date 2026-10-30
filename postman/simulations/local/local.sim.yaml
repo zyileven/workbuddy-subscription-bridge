@@ -1,0 +1,8 @@
+simulation: workbuddy-local-bridge
+routing: path
+mocks:
+  - name: OpenAI subscription route fixture
+    routeKey: openai
+    origin:
+      - api.openai.com
+    path: postman/mocks/openai

@@ -1,0 +1,6 @@
+# Allowlist the runtime files. Never send account data or credentials to Docker.
+**
+!Dockerfile
+!package.json
+!src/
+!src/**

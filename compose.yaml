@@ -1,0 +1,21 @@
+name: workbuddy-subscription-bridge
+
+services:
+  bridge:
+    build: .
+    image: workbuddy-subscription-bridge:local
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8787:8787"
+      - "127.0.0.1:1455:1455"
+    volumes:
+      - bridge-data:/app/.local
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  bridge-data:

@@ -1,0 +1,52 @@
+purpose:
+  stands_in_for: OpenAI model catalog and subscription-authorized Responses SSE; credentials and model names are synthetic.
+  unblocks: Real loopback bridge HTTP validation without spending subscription allowance or logging into OpenAI.
+assumptions:
+  - id: official-request-shape
+    status: supported
+    claim: The published subscription flow requires the public Responses endpoint, store false, stream true and an input array.
+    reason: The official provider documentation specifies these requirements; the bridge builds requests accordingly.
+    verification: Read the official models-and-inference and preview-limitations documentation on 2026-10-31. Initial Node HTTP tests verified the constructed requests against a stand-in. Subsequently, the same required request shape completed one real streamed text inference through the Docker-published bridge; see fingerprint live-oauth-20261031 and VALIDATION.md. This does not establish every model or tool capability.
+    source: https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference ; src/protocol.mjs ; test/bridge.test.mjs
+    updated_at: '2026-10-31'
+  - id: stream-and-tool-translation
+    status: supported
+    claim: The bridge preserves text and function tool history in the modeled streamed HTTP paths.
+    reason: Both the Node tests and a separately running Postman HTTP simulation exercise the real bridge. This supports caller behavior in the modeled paths, not real provider compatibility.
+    verification: On 2026-10-31 Asia/Shanghai, 28 Node tests passed. Postman Simulation on loopback port 4010 passed 8 scenarios; inspection recorded 7 inference requests with store false, stream true and input arrays. NDJSON events confirmed model discovery, inference traffic and HTTP 429. The timed-out caller returned within 500 ms while the simulation later completed its delayed request. During Docker preparation on the same date, the existing simulation was rerun and all 8 scenarios passed again with member NDJSON traffic inspected; 29 Node tests also passed inside the built image with external networking disabled. The additional test covers container-interface OAuth callback binding while retaining a loopback redirect. No real account or WorkBuddy was used in either run; see fingerprint docker-preparation-20261031 and VALIDATION.md.
+    source: test/bridge.test.mjs ; test/upstream.cjs ; postman/mocks/openai/default.js
+    updated_at: '2026-10-31'
+  - id: real-account-eligibility
+    status: unknown
+    claim: The user's selected account and workspace can authorize and consume subscription allowance through this bridge.
+    reason: Browser OAuth, the required granted scope, actual account model discovery and one completed real inference are confirmed. ChatGPT usage-page attribution has not been inspected, so actual subscription allowance accounting remains unknown.
+    verification: Initially no real account had been used. On 2026-10-31 the user completed browser OAuth; status showed connected true, plan_usage_enabled true and expired false. A real gpt-6.1-sol request through the Docker-published Chat Completions endpoint returned Bridge OK., stop and DONE after completion. Review of ChatGPT app usage remains pending. See fingerprint live-oauth-20261031 and VALIDATION.md.
+    source: README.md sections 1-4 ; https://developers.openai.com/siwc/token-sharing-open-source/errors-and-recovery
+    updated_at: '2026-10-31'
+  - id: actual-workbuddy-compatibility
+    status: unknown
+    claim: The installed WorkBuddy version accepts the bridge as its main model for a complete tool workflow.
+    reason: The published custom API documentation describes the entry point; no WorkBuddy session has been tested.
+    verification: Pending actual WorkBuddy model selection, simple chat, read-only tool task and usage review.
+    source: README.md section 4 ; https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Model
+    updated_at: '2026-10-31'
+  - id: observed-stream-envelope
+    status: supported
+    claim: The observed real inference path can omit Content-Type and use completed output-item snapshots with an empty terminal response output array.
+    reason: These conditions were directly observed in real Responses traffic and reproduced by local HTTP fixtures. Support is scoped to the observed account and path, not a promise that all provider responses use this envelope.
+    verification: On 2026-10-31 live diagnostics received HTTP 200 with no Content-Type, text deltas and completed message snapshots followed by response.completed with an empty output array. After compatibility fixes, one real streamed bridge request returned Bridge OK., stop and DONE. All 34 container tests and 16 Postman simulation scenarios passed; inspected member traffic included missing/incorrect Content-Type and empty terminal output cases, with 15 inference requests recorded by the stand-in. Inconsistent snapshots and failed/truncated streams still failed without a success finish.
+    source: src/server.mjs ; src/protocol.mjs ; test/bridge.test.mjs ; test/simulation.mjs ; postman/mocks/openai/default.js ; VALIDATION.md live validation
+    updated_at: '2026-10-31'
+fingerprints:
+  - id: local-prototype-20261031
+    date: '2026-10-31'
+    commit: No repository commit; local deliverable version 0.1.0
+    cli: Postman 1.77.0; Node.js 22.23.4
+  - id: docker-preparation-20261031
+    date: '2026-10-31'
+    commit: No repository commit; local deliverable 0.1.0 with Docker configuration and explicit listener-host support
+    cli: Postman 1.77.0; Node.js 22.23.4 on host and in container; Docker 29.8.2; Compose 5.5.0
+  - id: live-oauth-20261031
+    date: '2026-10-31'
+    commit: No repository commit; local deliverable 0.1.0 with missing Content-Type and empty terminal output compatibility fixes
+    cli: Postman 1.77.0; Node.js 22.23.4 on host and in container; Docker 29.8.2; Compose 5.5.0
