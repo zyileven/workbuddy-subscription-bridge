@@ -186,3 +186,40 @@ waits briefly for readiness and refuses an unavailable/mismatched public URL.
 Primary contracts: https://ngrok.com/docs/gateway/agent/api ;
 https://ngrok.com/docs/gateway/agent/config/v3 ;
 https://ngrok.com/docs/gateway/traffic-policy/actions/add-headers
+
+## Four-family configuration and provider reasoning metadata, 2026-10-31
+
+The configuration command now returns an array containing the latest numeric
+stable version of each visible Astra, Sol, Terra and Luna family in the signed-in
+account catalog. Versioned -bridge aliases route to their corresponding upstream
+slugs; existing Sol aliases remain valid. Missing families produce a stderr
+notice, and missing reasoning capability metadata produces an explicit error.
+
+Supported efforts and defaults are read directly from the catalog's
+supported_reasoning_levels[].effort and default_reasoning_level. No common
+effort list or model-family default is substituted. Effort names, including
+ultra and future syntactically valid catalog names, pass through unchanged;
+OpenAI remains responsible for model-specific support validation. Raw catalog
+metadata is used internally and is not added to the default HTTP model listing.
+
+- All 45 tests passed on the host and inside the rebuilt container image with
+  external networking disabled. Checks cover numeric version ordering, hidden
+  models, all four aliases, existing Sol compatibility, partial account catalogs,
+  default effort preservation, selective ultra support, malformed effort values,
+  missing metadata, and no OAuth/ngrok credentials in configuration output.
+- The Postman simulation passed 21 scenarios. Inspected NDJSON confirmed ngrok
+  discovery, family model-catalog lookup and four model alias requests. The
+  stand-in recorded 19 inference requests; the final four used canonical Astra,
+  Sol, Terra and Luna slugs with efforts ultra/ultra/ultra/max respectively.
+- Live model-catalog reads using the saved account confirmed that the current
+  Astra, Sol and Terra entries list low/medium/high/xhigh/max/ultra, whereas Luna
+  lists low/medium/high/xhigh/max. Defaults are medium/low/low/medium in that
+  family order. The rebuilt configuration generator produced those same values.
+  Only catalog reads were made; no real inference was requested in this change.
+- OpenAPI syntax lint passed. The POSIX config.sh wrapper was checked with an
+  isolated Docker command fixture: the default only obtains configuration;
+  --update rebuilds containers first, retaining the existing login volume, then
+  obtains the same configuration without another browser login.
+- The production local bridge remains stopped, and the temporary simulation was
+  stopped after verification. Live model-specific inference, ultra behavior in
+  WorkBuddy and the user's server ngrok route remain outside these checks.

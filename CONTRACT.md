@@ -8,9 +8,22 @@ Its traffic policy rewrites Host to `127.0.0.1:8787`; bridge bearer authenticati
 and Origin rejection still apply. The OAuth callback port is not tunneled by ngrok.
 Its bearer key is a separate randomly generated local secret; an OpenAI credential is never supplied to WorkBuddy.
 No OAuth, token-import, or upstream-URL configuration endpoint is exposed by HTTP.
-Successful CLI login also prints a WorkBuddy model object containing the bridge
-key and connection URL. `connection` prints it again without signing in or
-performing inference. Public mode reads ngrok's Docker-private GET /api/endpoints
+Successful CLI login also prints a WorkBuddy model array containing the bridge
+key and connection URL. `connection` queries the account catalog again and prints
+the array without signing in or performing inference. Each available Astra, Sol,
+Terra and Luna family contributes its highest numeric stable version from the
+visible account catalog. Missing families are omitted with a CLI stderr notice;
+an account with no supported family produces an explicit error.
+Effort lists and defaults come directly from the selected catalog entry's
+supported_reasoning_levels[].effort and default_reasoning_level. The CLI does
+not invent a fallback list when capability metadata is absent. The bridge checks
+effort-name syntax and forwards it unchanged, including ultra; model-specific
+support validation remains with OpenAI. Only models listing none allow disabling
+thinking in the generated configuration.
+`sh config.sh` wraps the connection command. `sh config.sh --update` first
+rebuilds the running containers while retaining the login volume, then prints
+the same configuration array without performing another browser login.
+Public mode reads ngrok's Docker-private GET /api/endpoints
 and matches the bridge upstream; --require-public refuses to print a loopback
 fallback or an unconfirmed configured public URL when the agent is unavailable.
 
@@ -24,9 +37,10 @@ Upstream: only public https://api.openai.com/v1/{models,responses}.
 Every upstream inference uses store=false, stream=true, an input array and no
 previous_response_id. Tools are grouped under the workbuddy namespace.
 WorkBuddy executes tools; the bridge never executes tools or shell commands.
-The local model alias `gpt-6.1-sol-bridge` requests upstream `gpt-6.1-sol`, while
-the Chat Completions response retains the requested alias. This allows an
-independent WorkBuddy entry alongside an existing direct model with that slug.
+Versioned local aliases `gpt-VERSION-{astra,sol,terra,luna}-bridge` request the
+canonical slug with the final `-bridge` suffix removed; the Chat Completions
+response retains the requested alias. Existing `gpt-6.1-sol-bridge` configurations
+remain valid. These IDs allow independent bridge entries alongside direct models.
 
 The bridge preserves developer/system instructions as developer messages in their
 original order. Chat tool-call IDs become Responses call_id values; results

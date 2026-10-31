@@ -1,0 +1,105 @@
+[
+  {
+    "id": "gpt-6-astra-bridge",
+    "name": "GPT-6 Astra（订阅桥接）",
+    "vendor": "Custom",
+    "provider": "openai",
+    "api": "openai-completions",
+    "url": "https://YOUR_NGROK_DOMAIN/v1/chat/completions",
+    "apiKey": "",
+    "supportsToolCall": true,
+    "supportsImages": true,
+    "supportsReasoning": true,
+    "onlyReasoning": true,
+    "useCustomProtocol": true,
+    "reasoning": {
+      "defaultEffort": "medium",
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra"
+      ],
+      "canDisableThinking": false
+    }
+  },
+  {
+    "id": "gpt-6.1-sol-bridge",
+    "name": "GPT-6.1 Sol（订阅桥接）",
+    "vendor": "Custom",
+    "provider": "openai",
+    "api": "openai-completions",
+    "url": "https://YOUR_NGROK_DOMAIN/v1/chat/completions",
+    "apiKey": "",
+    "supportsToolCall": true,
+    "supportsImages": true,
+    "supportsReasoning": true,
+    "onlyReasoning": true,
+    "useCustomProtocol": true,
+    "reasoning": {
+      "defaultEffort": "low",
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra"
+      ],
+      "canDisableThinking": false
+    }
+  },
+  {
+    "id": "gpt-6.1-terra-bridge",
+    "name": "GPT-6.1 Terra（订阅桥接）",
+    "vendor": "Custom",
+    "provider": "openai",
+    "api": "openai-completions",
+    "url": "https://YOUR_NGROK_DOMAIN/v1/chat/completions",
+    "apiKey": "",
+    "supportsToolCall": true,
+    "supportsImages": true,
+    "supportsReasoning": true,
+    "onlyReasoning": true,
+    "useCustomProtocol": true,
+    "reasoning": {
+      "defaultEffort": "low",
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra"
+      ],
+      "canDisableThinking": false
+    }
+  },
+  {
+    "id": "gpt-6-luna-bridge",
+    "name": "GPT-6 Luna（订阅桥接）",
+    "vendor": "Custom",
+    "provider": "openai",
+    "api": "openai-completions",
+    "url": "https://YOUR_NGROK_DOMAIN/v1/chat/completions",
+    "apiKey": "",
+    "supportsToolCall": true,
+    "supportsImages": true,
+    "supportsReasoning": true,
+    "onlyReasoning": true,
+    "useCustomProtocol": true,
+    "reasoning": {
+      "defaultEffort": "medium",
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "canDisableThinking": false
+    }
+  }
+]

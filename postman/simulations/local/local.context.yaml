@@ -44,6 +44,13 @@ assumptions:
     verification: On 2026-10-31, 40 tests passed on the host and in the rebuilt image. The expanded Postman simulation passed 17 scenarios and NDJSON confirmed the ngrok member GET /api/endpoints call. ngrok 3.39.13 ran with networking disabled, served an empty endpoints array and rejected a hostile Host with HTTP 401. No real authtoken, public tunnel or new browser grant was used. See fingerprint ngrok-deployment-20261031 and VALIDATION.md.
     source: https://ngrok.com/docs/gateway/agent/api ; src/connection.mjs ; test/connection.test.mjs ; postman/mocks/ngrok/default.js ; test/simulation.mjs
     updated_at: '2026-10-31'
+  - id: account-model-family-capabilities
+    status: supported
+    claim: Configuration selects the latest numeric stable version in each visible family and preserves that catalog entry's supported_reasoning_levels and default_reasoning_level.
+    reason: The official catalog is account-specific. Live reads established the actual reasoning field shape and differing ultra availability, while local HTTP fixtures exercise version selection, hidden/missing models and exact capability propagation. A catalog entry does not by itself prove successful model inference.
+    verification: On 2026-10-31 all 45 tests passed on host and in the image, and the Postman simulation passed 21 scenarios with 19 modeled inference requests. NDJSON confirmed the family catalog query and four alias requests; inspection confirmed canonical slugs and ultra/ultra/ultra/max efforts. Live catalog reads and the rebuilt generator confirmed actual effort lists and defaults for Astra, Sol, Terra and Luna. No real inference was sent in this change. See fingerprint family-config-20261031 and VALIDATION.md.
+    source: https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference ; src/models.mjs ; src/connection.mjs ; src/server.mjs ; test/connection.test.mjs ; test/simulation.mjs ; VALIDATION.md
+    updated_at: '2026-10-31'
 fingerprints:
   - id: local-prototype-20261031
     date: '2026-10-31'
@@ -61,3 +68,7 @@ fingerprints:
     date: '2026-10-31'
     commit: 63ef450 plus ngrok ingress, deployment script and connection-output changes validated before commit
     cli: Postman 1.77.0; Node.js 22.23.4; Docker 29.8.2; Compose 5.5.0; ngrok 3.39.13
+  - id: family-config-20261031
+    date: '2026-10-31'
+    commit: 8c12974 plus four-family selection, provider reasoning metadata and config.sh changes validated before commit
+    cli: Postman 1.77.0; Node.js 22.23.4; Docker 29.8.2; Compose 5.5.0

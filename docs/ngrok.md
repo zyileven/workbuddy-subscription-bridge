@@ -29,14 +29,14 @@ ngrok token 只传给 ngrok 容器；WorkBuddy 仍填写桥接服务自己的 Ke
 
 ## 启动并查看地址
 
-一键启动、触发浏览器登录，并在成功后自动输出完整 WorkBuddy 模型配置：
+一键启动、触发浏览器登录，并在成功后自动输出四系列最新可用 WorkBuddy 模型配置数组：
 
 ```bash
 sh start.sh
 ```
 
 无桌面服务器先建立下文的 1455 回调转发，或直接使用 README 中的 SSH 一条命令。
-脚本输出的 JSON 已含实际公网 URL 和桥接 Key，可追加到 WorkBuddy 的模型列表。
+脚本输出的数组包含 Astra、Sol、Terra、Luna 各系列在账号目录中最新可用的稳定版本，已填好公网 URL 和桥接 Key。将数组中的各个对象合并到 WorkBuddy 的模型列表。
 
 以下命令用于手动启动和排错：
 
@@ -73,10 +73,10 @@ ssh -N -o ExitOnForwardFailure=yes \
 登录命令必须保持运行直到回调完成。成功后可以关闭这个 SSH 转发，日常请求走
 ngrok HTTPS 地址即可。完整登录流程见 [远程部署](远程部署.md)。
 
-登录成功会自动打印 WorkBuddy 模型 JSON。后续再次获取配置可执行：
+登录成功会自动打印 WorkBuddy 模型 JSON 数组。后续再次获取配置可执行：
 
 ```bash
-docker compose exec -T bridge node src/cli.mjs connection --require-public
+sh config.sh
 ```
 
 公网地址通过 ngrok agent 的 `/api/endpoints` 自动读取；4040 管理端口仅在 Docker
@@ -93,12 +93,12 @@ ngrok 只转发 API 端口 8787，OAuth 回调端口 1455 继续仅绑定服务�
 | --- | --- |
 | 完整接口地址 | `https://your-domain.ngrok.app/v1/chat/completions` |
 | Base URL（客户端需要时） | `https://your-domain.ngrok.app/v1` |
-| 模型 ID | `gpt-6.1-sol-bridge` |
+| 模型 ID | `config.sh` 输出的 Astra、Sol、Terra、Luna 最新可用模型 ID |
 | API Key | 服务器上 `node src/cli.mjs key` 命令输出的桥接 Key |
 | 自定义协议、工具调用 | 开启 |
 
 编辑 `~/.workbuddy/models.json` 时只更新桥接条目的 `url` 和 `apiKey`，保留其他模型。
-模型条目可参考 [配置示例](../examples/workbuddy-model.json)。
+四系列条目可参考 [配置示例](../examples/workbuddy-models.json)，具体版本以命令实时输出为准。
 
 从另一台电脑检查公网可达性，不需要 Key：
 

@@ -80,7 +80,12 @@ paths:
                       tool_call_id: { type: string }
                 tools: { type: array, items: { type: object } }
                 tool_choice: { type: string, enum: [auto, none, required] }
-                reasoning_effort: { type: string, enum: [none, minimal, low, medium, high, xhigh, max] }
+                reasoning_effort:
+                  type: string
+                  minLength: 1
+                  maxLength: 32
+                  pattern: '^[a-z][a-z0-9_-]{0,31}$'
+                  description: Use a supported_reasoning_levels effort from the selected account model. The value, including ultra when available, is passed to OpenAI; model-specific validation remains upstream.
                 parallel_tool_calls: { type: boolean }
                 stream_options:
                   type: object

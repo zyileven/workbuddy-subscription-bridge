@@ -37,14 +37,15 @@ async function write(res, value) {
   });
 }
 
-export async function listModels(auth, { baseURL = 'https://api.openai.com/v1', fetcher = fetch, signal = AbortSignal.timeout(20000) } = {}) {
+export async function listModels(auth, { baseURL = 'https://api.openai.com/v1', fetcher = fetch, signal = AbortSignal.timeout(20000), includeMetadata = false } = {}) {
   const token = await auth.getToken();
   const data = await checkedJSON(await fetcher(`${baseURL}/models`, {
     headers: { Authorization: `Bearer ${token}` }, redirect: 'error', signal,
   }));
   const list = Array.isArray(data.models) ? data.models.filter(m => m.visibility === 'list') : data.data;
   if (!Array.isArray(list)) throw new BridgeError('Unexpected account model catalog.', 502, 'invalid_model_catalog');
-  return { object: 'list', data: list.map(m => ({ id: m.slug ?? m.id, object: 'model', created: 0, owned_by: 'openai', name: m.display_name ?? m.id ?? m.slug })) };
+  return { object: 'list', data: list.map(m => ({ id: m.slug ?? m.id, object: 'model', created: 0, owned_by: 'openai', name: m.display_name ?? m.id ?? m.slug,
+    ...(includeMetadata ? { metadata: m } : {}) })) };
 }
 
 export function createBridge({ auth, localKey, baseURL = 'https://api.openai.com/v1', fetcher = fetch, timeoutMs = 300000, maxConcurrent = 4 } = {}) {

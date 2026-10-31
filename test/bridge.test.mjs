@@ -60,13 +60,23 @@ test('non-stream completion uses the subscription contract and converts usage', 
   assert.equal(upstream.store, false); assert.equal(upstream.stream, true); assert.equal(upstream.input[0].role, 'developer');
   assert.equal(upstream.temperature, undefined); assert.equal(upstream.max_tokens, undefined);
 });
-test('the separate WorkBuddy bridge ID targets the canonical model and preserves response identity', async () => {
-  const response = await send({ model: 'gpt-6.1-sol-bridge' });
+test('all family bridge IDs target canonical slugs and preserve response identity, including existing Sol IDs', async () => {
+  for (const slug of ['gpt-6-astra', 'gpt-6.1-sol', 'gpt-6.1-terra', 'gpt-6-luna', 'gpt-6.10-sol']) {
+    const response = await send({ model: `${slug}-bridge` });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).model, `${slug}-bridge`);
+    assert.equal(mock.records.at(-1).body.model, slug);
+    assert.equal(toResponses({ model: slug, messages }).body.model, slug);
+  }
+});
+test('provider effort names including ultra pass through unchanged; malformed effort values fail locally', async () => {
+  const response = await send({ model: 'gpt-6.1-sol-bridge', reasoning_effort: 'ultra' });
   assert.equal(response.status, 200);
-  assert.equal((await response.json()).model, 'gpt-6.1-sol-bridge');
-  assert.equal(mock.records.at(-1).body.model, 'gpt-6.1-sol');
-  const direct = toResponses({ model: 'gpt-6.1-sol', messages });
-  assert.equal(direct.body.model, 'gpt-6.1-sol');
+  assert.equal(mock.records.at(-1).body.reasoning.effort, 'ultra');
+  assert.equal(toResponses({ model: 'fixture-text', messages, reasoning_effort: 'future_level' }).body.reasoning.effort, 'future_level');
+  for (const effort of ['', null, 123, {}, 'a'.repeat(33), 'has spaces']) {
+    assert.throws(() => toResponses({ model: 'fixture-text', messages, reasoning_effort: effort }), /effort name/);
+  }
 });
 test('SSE survives fragmented UTF-8 and includes terminal usage only on completion', async () => {
   const response = await send({ stream: true, stream_options: { include_usage: true } });

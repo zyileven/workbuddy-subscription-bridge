@@ -1,14 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { BridgeError, sseEvents } from './common.mjs';
+import { upstreamModelId } from './models.mjs';
 
 const fail = (message, param) => { throw new BridgeError(message, 400, 'unsupported_request', { param }); };
 const nameOK = n => typeof n === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(n);
 const ignoredFields = new Set(['temperature', 'top_p', 'max_tokens', 'max_completion_tokens', 'max_output_tokens',
   'presence_penalty', 'frequency_penalty', 'logit_bias', 'seed', 'user', 'metadata', 'store', 'service_tier', 'prompt_cache_key', 'reasoning_content']);
 const supportedFields = new Set(['model', 'messages', 'tools', 'tool_choice', 'stream', 'stream_options', 'n', 'reasoning_effort', 'parallel_tool_calls']);
-// WorkBuddy keys custom configurations by ID. Keep the bridge entry distinct
-// from an existing direct OpenAI model while requesting its canonical slug.
-const modelAliases = new Map([['gpt-6.1-sol-bridge', 'gpt-6.1-sol']]);
 
 function content(value, role) {
   if (typeof value === 'string') return [{ type: 'input_text', text: value }];
@@ -69,7 +67,7 @@ export function toResponses(request) {
     }
   }
   if (calls.size !== results.size) fail('Each historical tool call needs its tool result before the next request.', 'messages');
-  const body = { model: modelAliases.get(request.model) ?? request.model, input, store: false, stream: true };
+  const body = { model: upstreamModelId(request.model), input, store: false, stream: true };
   const names = new Set();
   if (request.tools !== undefined) {
     if (!Array.isArray(request.tools)) fail('tools must be an array.', 'tools');
@@ -90,7 +88,7 @@ export function toResponses(request) {
   }
   if (request.parallel_tool_calls !== undefined) body.parallel_tool_calls = request.parallel_tool_calls;
   if (request.reasoning_effort !== undefined) {
-    if (!['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'].includes(request.reasoning_effort)) fail('Unsupported reasoning_effort; use a level supported by the selected model.', 'reasoning_effort');
+    if (typeof request.reasoning_effort !== 'string' || !/^[a-z][a-z0-9_-]{0,31}$/.test(request.reasoning_effort)) fail('reasoning_effort must be an effort name from the selected model catalog.', 'reasoning_effort');
     body.reasoning = { effort: request.reasoning_effort };
   }
   return { body, ignored, names };

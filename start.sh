@@ -34,5 +34,5 @@ compose up -d --build --wait --wait-timeout 120
 printf '%s\n' \
   '请在浏览器打开下面的授权链接。' \
   '无桌面服务器需要先在浏览器所在电脑建立 1455 的 SSH 回调转发，步骤见 README。' \
-  '登录完成后将自动打印包含公网 URL 和桥接 Key 的 WorkBuddy 模型 JSON。'
+  '登录完成后将自动打印 Astra、Sol、Terra、Luna 各系列最新可用模型的 WorkBuddy 配置数组（包含公网 URL 和桥接 Key）。'
 compose exec -T bridge node src/cli.mjs login --host 0.0.0.0 --no-open --require-public

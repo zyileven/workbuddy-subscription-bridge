@@ -44,43 +44,93 @@ ssh -L 127.0.0.1:1455:127.0.0.1:1455 USER@REMOTE_HOST \
 
 脚本会构建并启动桥接和 ngrok、打印登录链接。保持终端运行，在浏览器打开链接，
 登录 ChatGPT 并授权套餐使用。回调仍为 `http://127.0.0.1:1455/auth/callback`。
-登录成功后会自动读取当前公网地址和桥接 Key，直接打印完整的 WorkBuddy 模型 JSON：
+登录成功后会自动读取公网地址、桥接 Key 和当前账号的模型目录，按 Astra、Sol、Terra、Luna
+的顺序，输出每个系列最新可用稳定版本的 **JSON 数组**。版本按数字比较，例如 `6.10`
+高于 `6.9`，不会固定在代码中的某一代版本。账号目录中不可见的系列不会被编造出来，
+终端会提示缺少哪些系列。
+
+每个模型的 `reasoning.supportedEfforts` 和 `defaultEffort` 也直接读取 OpenAI 返回的
+`supported_reasoning_levels`、`default_reasoning_level`，不统一写死档位。支持 `ultra`
+的模型会保留 `ultra`；不支持的模型不会增加该选项。关闭思考也只在目录列出 `none`
+时开启。目录缺少这些能力字段时会明确报错，避免输出与真实模型不一致的列表。
+
+输出结构如下（这里只展示核心字段；实际输出也包含工具、图片和思考设置）：
 
 ```json
-{
-  "id": "gpt-6.1-sol-bridge",
-  "name": "GPT-6.1 Sol（订阅桥接）",
-  "vendor": "Custom",
-  "provider": "openai",
-  "api": "openai-completions",
-  "url": "https://你的实际公网地址/v1/chat/completions",
-  "apiKey": "脚本会在这里填入真实桥接Key",
-  "supportsToolCall": true,
-  "supportsImages": true,
-  "supportsReasoning": true,
-  "onlyReasoning": true,
-  "useCustomProtocol": true,
-  "reasoning": {
-    "defaultEffort": "medium",
-    "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
-    "canDisableThinking": false
+[
+  {
+    "id": "gpt-6-astra-bridge",
+    "name": "GPT-6 Astra（订阅桥接）",
+    "vendor": "Custom",
+    "provider": "openai",
+    "api": "openai-completions",
+    "url": "https://你的实际公网地址/v1/chat/completions",
+    "apiKey": "脚本自动填入真实桥接Key",
+    "supportsToolCall": true,
+    "useCustomProtocol": true
+  },
+  {
+    "id": "gpt-6.1-sol-bridge",
+    "name": "GPT-6.1 Sol（订阅桥接）",
+    "vendor": "Custom",
+    "provider": "openai",
+    "api": "openai-completions",
+    "url": "https://你的实际公网地址/v1/chat/completions",
+    "apiKey": "脚本自动填入真实桥接Key",
+    "supportsToolCall": true,
+    "useCustomProtocol": true
+  },
+  {
+    "id": "gpt-6.1-terra-bridge",
+    "name": "GPT-6.1 Terra（订阅桥接）",
+    "vendor": "Custom",
+    "provider": "openai",
+    "api": "openai-completions",
+    "url": "https://你的实际公网地址/v1/chat/completions",
+    "apiKey": "脚本自动填入真实桥接Key",
+    "supportsToolCall": true,
+    "useCustomProtocol": true
+  },
+  {
+    "id": "gpt-6-luna-bridge",
+    "name": "GPT-6 Luna（订阅桥接）",
+    "vendor": "Custom",
+    "provider": "openai",
+    "api": "openai-completions",
+    "url": "https://你的实际公网地址/v1/chat/completions",
+    "apiKey": "脚本自动填入真实桥接Key",
+    "supportsToolCall": true,
+    "useCustomProtocol": true
   }
-}
+]
 ```
 
-复制**终端实际输出的对象**，追加到使用 WorkBuddy 那台电脑的
-`~/.workbuddy/models.json` 数组中，保留其他模型。如果已有桥接条目，只替换该条目。
-然后在 WorkBuddy 选择 `GPT-6.1 Sol（订阅桥接）`。已有会话若未加载新配置，完全退出
+示例版本仅用于说明格式，**以终端根据账号目录实时输出的结果为准**。
+完整留空 Key 的示例见 [四系列配置示例](examples/workbuddy-models.json)。
+
+将终端输出的数组中的各个对象，合并到 WorkBuddy 所在电脑的 `~/.workbuddy/models.json`
+数组中，保留其他模型，避免嵌套数组。已有同 ID 的桥接条目则更新该条目。
+然后在 WorkBuddy 中选择对应系列的订阅桥接模型。已有会话若未加载新配置，完全退出
 并重新打开 WorkBuddy 后再选模型。首次登录完成后可以关闭 SSH，日常通过 ngrok 访问。
 
 已经登录过、只想再次获取同一段配置时，在服务器执行：
 
 ```bash
-docker compose exec -T bridge node src/cli.mjs connection --require-public
+sh config.sh
 ```
 
-这个命令不重新登录、不发推理请求；输出包含可直接使用的桥接 Key。ngrok 尚未上线时
+这个命令不重新登录、不发推理请求，会重新查询账号目录并输出四系列配置及桥接 Key。ngrok 尚未上线时
 会明确报错并保留登录数据，修好 `.env` 或网络后重新获取即可。
+
+已经部署旧版的服务器可以保留 `.env` 和登录数据，执行以下命令更新并获取四系列配置：
+
+```bash
+git pull --ff-only
+sh config.sh --update
+```
+
+`--update` 会先重建服务容器并继续使用原来的登录数据和 Key，再输出配置，不走浏览器登录。
+更新后日常只需记住 `sh config.sh`；首次部署和登录仍使用 `sh start.sh`。
 
 详细维护步骤见 [ngrok 公网入口](docs/ngrok.md) 和 [远程部署](docs/远程部署.md)。
 

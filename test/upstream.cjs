@@ -35,6 +35,15 @@ function createMock() {
       { slug: 'fixture-text', display_name: 'Fixture text', visibility: 'list' },
       { slug: 'fixture-hidden', display_name: 'Hidden', visibility: 'hidden' },
     ] });
+    if (path === '/family/models') return json(200, { models: [
+      { slug: 'gpt-5.6-sol', display_name: 'Older Sol', visibility: 'list' },
+      ...['gpt-6-astra', 'gpt-6.1-sol', 'gpt-6.1-terra', 'gpt-6-luna'].map(slug => ({
+        slug, display_name: slug, visibility: 'list', input_modalities: ['text', 'image'],
+        default_reasoning_level: slug.endsWith('-sol') || slug.endsWith('-terra') ? 'low' : 'medium',
+        supported_reasoning_levels: ['low', 'medium', 'high', 'xhigh', 'max', ...(!slug.endsWith('-luna') ? ['ultra'] : [])].map(effort => ({ effort })),
+      })),
+      { slug: 'gpt-99-astra', display_name: 'Hidden future fixture', visibility: 'hidden' },
+    ] });
     if (path !== '/responses' || req.method !== 'POST') return json(501, { error: { code: 'not_modeled' } });
     if (data.model === 'fixture-429') return json(429, { error: { code: 'subscription_sharing_usage_limit_exceeded' } }, { 'Retry-After': '30', 'x-request-id': 'req_fixture_limit' });
     if (data.model === 'fixture-403') return json(403, { error: { code: 'subscription_sharing_user_not_eligible' } });

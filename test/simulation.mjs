@@ -1,7 +1,7 @@
 // Run the real bridge against a separately running Postman HTTP simulation.
 import assert from 'node:assert/strict';
 import { createBridge } from '../src/server.mjs';
-import { workBuddyModel } from '../src/connection.mjs';
+import { workBuddyModels } from '../src/connection.mjs';
 const upstream = process.argv[2];
 if (!upstream || !/^http:\/\/127\.0\.0\.1:\d+\/openai$/.test(upstream)) throw new Error('Usage: node test/simulation.mjs http://127.0.0.1:4010/openai');
 const key = 'fixture-local-key-at-least-32-characters';
@@ -39,17 +39,27 @@ try {
   const inconsistent = await (await post({ model: 'fixture-empty-final-inconsistent', stream: true })).text();
   assert.match(inconsistent, /inconsistent_stream/);
   assert.doesNotMatch(inconsistent, /\[DONE\]|"finish_reason":"(?:stop|tool_calls)"/);
-  const modelConfig = await workBuddyModel({
+  const modelConfigs = await workBuddyModels({
     status: async () => ({ connected: true, plan_usage_enabled: true }),
     init: async () => ({ local_key: key }),
-  }, { ngrokAPI: `${new URL(upstream).origin}/ngrok`, publicURL: '', requirePublic: true });
-  assert.equal(modelConfig.url, 'https://fixture-bridge.ngrok.example/v1/chat/completions');
-  assert.equal(modelConfig.apiKey, key);
+    getToken: async () => 'fixture-catalog-access-token',
+  }, { ngrokAPI: `${new URL(upstream).origin}/ngrok`, publicURL: '', requirePublic: true, modelBaseURL: `${upstream}/family` });
+  assert.deepEqual(modelConfigs.map(model => model.id), ['gpt-6-astra-bridge', 'gpt-6.1-sol-bridge', 'gpt-6.1-terra-bridge', 'gpt-6-luna-bridge']);
+  assert.ok(modelConfigs.every(model => model.url === 'https://fixture-bridge.ngrok.example/v1/chat/completions' && model.apiKey === key));
+  assert.deepEqual(modelConfigs.map(model => model.reasoning.supportedEfforts.includes('ultra')), [true, true, true, false]);
+  assert.deepEqual(modelConfigs.map(model => model.reasoning.defaultEffort), ['medium', 'low', 'low', 'medium']);
+  for (const model of modelConfigs) {
+    const result = await post({ model: model.id, reasoning_effort: model.reasoning.supportedEfforts.at(-1) });
+    assert.equal(result.status, 200);
+    assert.equal((await result.json()).model, model.id);
+  }
   const inspected = await (await fetch(`${upstream}/inspect`)).json();
   const requests = inspected.records.filter(r => r.path === '/responses');
-  assert.equal(requests.length, 15);
+  assert.equal(requests.length, 19);
+  assert.deepEqual(requests.slice(-4).map(request => request.body.model), ['gpt-6-astra', 'gpt-6.1-sol', 'gpt-6.1-terra', 'gpt-6-luna']);
+  assert.deepEqual(requests.slice(-4).map(request => request.body.reasoning.effort), ['ultra', 'ultra', 'ultra', 'max']);
   for (const request of requests) { assert.equal(request.body.store, false); assert.equal(request.body.stream, true); assert.ok(Array.isArray(request.body.input)); }
-  console.log('Postman HTTP simulation: 17 scenarios passed; 15 inference requests observed by the upstream stand-in.');
+  console.log('Postman HTTP simulation: 21 scenarios passed; 19 inference requests observed by the upstream stand-in.');
   console.log('Verified model discovery, streamed text, parallel tools, tool results, HTTP 429, stream failure, dropped stream, timeout, missing/incorrect Content-Type and empty terminal output handling.');
   console.log('Verified ngrok agent endpoint discovery and ready-to-paste model configuration against a local agent stand-in.');
   console.log('This simulation does not verify real provider eligibility, quota, public ngrok connectivity or WorkBuddy behavior.');
